@@ -1,10 +1,10 @@
 {
-  "name": "orientier/brandfolder-sdk-php",
+  "name": "orientier/brandfolder-api-php",
   "version": "0.1.0",
   "type": "library",
   "description": "PHP library for v4 of the Brandfolder REST API",
   "keywords": ["brandfolder", "dam", "media", "images", "digital asset management"],
-  "homepage": "https://github.com/orientier/brandfolder-sdk-php",
+  "homepage": "https://github.com/orientier/brandfolder-api-php",
   "license": "MIT",
   "authors": [
     {
