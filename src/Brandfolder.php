@@ -4,7 +4,7 @@ namespace Brandfolder;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
-//use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ClientException;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -22,6 +22,20 @@ class Brandfolder {
    * @var string $version
    */
   public $version = self::VERSION;
+
+  /**
+   * The status code of the most recent operation, if applicable.
+   *
+   * @var int $status
+   */
+  public $status;
+
+  /**
+   * A useful message pertaining to the most recent operation, if applicable.
+   *
+   * @var string $message
+   */
+  public $message;
 
   /**
    * HTTP client.
@@ -50,8 +64,10 @@ class Brandfolder {
    * Brandfolder is specified.
    *
    * @var string $default_brandfolder_id
+   * 
+   * @todo setBrandfolder() method.
    */
-  private $default_brandfolder_id;
+  public $default_brandfolder_id;
 
   /**
    * Brandfolder constructor.
@@ -85,14 +101,31 @@ class Brandfolder {
    * Gets Brandfolders to which the current user has access.
    *
    * @param array $query_params
-   * @return ResponseInterface
+   * @return array
    *
    * @throws \GuzzleHttp\Exception\GuzzleException
    *
    * @see https://developers.brandfolder.com/?http#list-brandfolders
    */
   public function getBrandfolders($query_params = []) {
-    return $this->request('GET', '/brandfolders', $query_params);
+    $response = $this->request('GET', '/brandfolders', $query_params);
+    $this->status = $response->getStatusCode();
+    if ($this->status == 200) {
+      $brandfolders = [];
+      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
+      if (isset($content->data)) {
+        foreach ($content->data as $bf_data) {
+          $brandfolders[$bf_data->id] = $bf_data->attributes->name;
+        }
+      }
+
+      return $brandfolders;
+    }
+    else {
+      $this->message = $response->getReasonPhrase();
+
+      return FALSE;
+    }
   }
 
   /**
@@ -129,6 +162,74 @@ class Brandfolder {
   }
 
   /**
+   * Fetches an individual asset.
+   *
+   * @param $asset_id
+   * @param array $query_params
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/?python#fetch-an-asset
+   */
+  public function fetchAsset($asset_id, $query_params = []) {
+    // @todo: Error handling, centralized.
+    try {
+      $response = $this->request('GET', "/assets/$asset_id", $query_params);
+
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
+        $r = 5;
+
+        return $data;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
+   * Lists multipls assets.
+   *
+   * @param array $query_params
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/?http#list-assets
+   *
+   * @todo: assets within Brandfolder vs collection vs org
+   */
+  public function listAssets($query_params = []) {
+    // @todo: Error handling, centralized.
+    try {
+      if (isset($this->default_brandfolder_id)) {
+        $response = $this->request('GET', "/brandfolders/{$this->default_brandfolder_id}/assets", $query_params);
+
+        $this->status = $response->getStatusCode();
+        if ($this->status == 200) {
+          $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+          return $data->data;
+        }
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
    * Makes a request to the Brandfolder API.
    *
    * @param string $method
@@ -149,6 +250,9 @@ class Brandfolder {
     $options = [
       'headers' => [
         'Authorization' => 'Bearer ' . $this->api_key,
+        'Host' => 'brandfolder.com',
+        'Accept' => 'application/json',
+        'Content-Type' => 'application/json'
       ],
     ];
 
