@@ -146,7 +146,7 @@ class Brandfolder {
    * Gets Collections belonging to a certain Brandfolder.
    *
    * @param array $query_params
-   * @return ResponseInterface
+   * @return bool|array
    *
    * @throws \GuzzleHttp\Exception\GuzzleException
    *
@@ -158,7 +158,24 @@ class Brandfolder {
       $brandfolder_id = $this->default_brandfolder_id;
     }
 
-    return $this->request('GET', "/brandfolders/{$brandfolder_id}/collections", $query_params);
+    $response = $this->request('GET', "/brandfolders/{$brandfolder_id}/collections", $query_params);
+    $this->status = $response->getStatusCode();
+    if ($this->status == 200) {
+      $collections = [];
+      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
+      if (isset($content->data)) {
+        foreach ($content->data as $collection_data) {
+          $collections[$collection_data->id] = $collection_data->attributes->name;
+        }
+      }
+
+      return $collections;
+    }
+    else {
+      $this->message = $response->getReasonPhrase();
+
+      return FALSE;
+    }
   }
 
   /**
@@ -207,11 +224,17 @@ class Brandfolder {
    *
    * @todo: assets within Brandfolder vs collection vs org
    */
-  public function listAssets($query_params = []) {
+  public function listAssets($query_params = [], $collection = NULL) {
     // @todo: Error handling, centralized.
     try {
       if (isset($this->default_brandfolder_id)) {
-        $response = $this->request('GET', "/brandfolders/{$this->default_brandfolder_id}/assets", $query_params);
+        if (is_null($collection)) {
+          $endpoint = "/brandfolders/{$this->default_brandfolder_id}/assets";
+        }
+        else {
+          $endpoint = "/collections/$collection/assets";
+        }
+        $response = $this->request('GET', $endpoint, $query_params);
 
         $this->status = $response->getStatusCode();
         if ($this->status == 200) {
