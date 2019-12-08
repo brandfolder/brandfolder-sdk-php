@@ -75,9 +75,14 @@ class Brandfolder {
    * @param string $api_key
    * @param \GuzzleHttp\ClientInterface|NULL $client
    */
-  public function __construct($api_key, ClientInterface $client = NULL) {
+  public function __construct($api_key, $brandfolder_id = NULL, ClientInterface $client = NULL) {
     $this->api_key = $api_key;
 
+    if (!is_null($brandfolder_id)) {
+      $this->default_brandfolder_id = $brandfolder_id;
+    }
+    
+    $this->client = $client;
     if (is_null($client)) {
       $client = new Client();
     }
@@ -268,7 +273,7 @@ class Brandfolder {
    * @return ResponseInterface
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function request($method, $path, $query_params = [], $body = []) {
+  public function request($method, $path, $query_params = [], $body = NULL) {
 
     $options = [
       'headers' => [
@@ -279,9 +284,17 @@ class Brandfolder {
       ],
     ];
 
-    // @todo: params
+    if (count($query_params) > 0) {
+      $options['query'] = $query_params;
+    }
 
-    // @todo: body
+    // @todo: Test.
+    if (!is_null($body)) {
+      if (!is_string($body)) {
+        $body = json_encode($body);
+      }
+      $options['json'] = $body;
+    }
 
     return $this->client->request($method, $this->endpoint . $path, $options);
   }
