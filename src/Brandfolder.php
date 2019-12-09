@@ -70,6 +70,16 @@ class Brandfolder {
   public $default_brandfolder_id;
 
   /**
+   * The collection to use for collection-specific requests, when no other
+   * collection is specified.
+   *
+   * @var string $default_collection_id
+   * 
+   * @todo setCollection() method.
+   */
+  public $default_collection_id;
+
+  /**
    * Brandfolder constructor.
    *
    * @param string $api_key
@@ -82,7 +92,6 @@ class Brandfolder {
       $this->default_brandfolder_id = $brandfolder_id;
     }
     
-    $this->client = $client;
     if (is_null($client)) {
       $client = new Client();
     }
@@ -233,6 +242,9 @@ class Brandfolder {
     // @todo: Error handling, centralized.
     try {
       if (isset($this->default_brandfolder_id)) {
+        if (is_null($collection)) {
+          $collection = $this->default_collection_id;
+        }
         if (is_null($collection)) {
           $endpoint = "/brandfolders/{$this->default_brandfolder_id}/assets";
         }
