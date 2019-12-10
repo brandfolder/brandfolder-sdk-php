@@ -212,7 +212,6 @@ class Brandfolder {
       $this->status = $response->getStatusCode();
       if ($this->status == 200) {
         $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
-        $r = 5;
 
         return $data;
       }
