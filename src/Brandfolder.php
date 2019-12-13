@@ -256,6 +256,44 @@ class Brandfolder {
         if ($this->status == 200) {
           $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
 
+          // @todo: Don't just return ->data. Also return ->meta or come up with some other way to let consumers use it. It's important for pagination, etc.
+          return $data->data;
+        }
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
+   * Retrieves tags used in a Brandfolder.
+   *
+   * @param array $query_params
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/?http#list-assets
+   *
+   * @todo: assets within Brandfolder vs collection vs org
+   */
+  public function getTags($query_params = []) {
+    // @todo: Error handling, centralized.
+    try {
+      if (isset($this->default_brandfolder_id)) {
+        $endpoint = "/brandfolders/{$this->default_brandfolder_id}/tags";
+        $response = $this->request('GET', $endpoint, $query_params);
+
+        $this->status = $response->getStatusCode();
+        if ($this->status == 200) {
+          $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+          // @todo: Don't just return ->data. Also return ->meta or come up with some other way to let consumers use it. It's important for pagination, etc.
           return $data->data;
         }
       }
