@@ -64,7 +64,7 @@ class Brandfolder {
    * Brandfolder is specified.
    *
    * @var string $default_brandfolder_id
-   * 
+   *
    * @todo setBrandfolder() method.
    */
   public $default_brandfolder_id;
@@ -74,7 +74,7 @@ class Brandfolder {
    * collection is specified.
    *
    * @var string $default_collection_id
-   * 
+   *
    * @todo setCollection() method.
    */
   public $default_collection_id;
@@ -91,7 +91,7 @@ class Brandfolder {
     if (!is_null($brandfolder_id)) {
       $this->default_brandfolder_id = $brandfolder_id;
     }
-    
+
     if (is_null($client)) {
       $client = new Client();
     }
@@ -213,6 +213,7 @@ class Brandfolder {
       if ($this->status == 200) {
         $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
 
+        // @todo: Process included data a la listAssets().
         return $data;
       }
     }
@@ -254,10 +255,46 @@ class Brandfolder {
 
         $this->status = $response->getStatusCode();
         if ($this->status == 200) {
-          $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
+          $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
 
-          // @todo: Don't just return ->data. Also return ->meta or come up with some other way to let consumers use it. It's important for pagination, etc.
-          return $data->data;
+          // If additional data was included in the response (by request),
+          // process it to make it more useful.
+          // @todo: Assess performance.
+          if (isset($result->included)) {
+            // Structure the included data as an associative array of items
+            // grouped by type and indexed therein by ID.
+            $included = [];
+            foreach ($result->included as $item) {
+              $included[$item->type][$item->id] = $item->attributes;
+            }
+            $result->included = $included;
+
+            // Update each asset to contain useful values for each included
+            // attribute rather than just a list of items with IDs.
+            array_walk($result->data, function($asset) use ($included) {
+              foreach ($asset->relationships as $type_label => $data) {
+                foreach ($data->data as $item) {
+                  $type = $item->type;
+                  if (isset($included[$type][$item->id])) {
+                    $attributes = $included[$type][$item->id];
+                    // For custom field values, set up a convenient array keyed
+                    // by field keys and containing field values. If users
+                    // need to know the unique ID of a particular custom field
+                    // instance, they can still look in $asset->relationships.
+                    if ($type == 'custom_field_values') {
+                      $key = $attributes->key;
+                      $asset->{$type}[$key] = $attributes->value;
+                    }
+                    else {
+                      $asset->{$type}[$item->id] = $attributes;
+                    }
+                  }
+                }
+              }
+            });
+          }
+
+          return $result;
         }
       }
     }
