@@ -229,6 +229,10 @@ class Brandfolder {
    * Lists multipls assets.
    *
    * @param array $query_params
+   * @param string|null $collection
+   *  An ID of a collection within which to search for assets, or "all" to look
+   *  throughout the entire Brandfolder. If this param is null, the operation
+   *  will use the previously defined default collection, if applicable.
    *
    * @return bool|mixed
    *
@@ -245,7 +249,7 @@ class Brandfolder {
         if (is_null($collection)) {
           $collection = $this->default_collection_id;
         }
-        if (is_null($collection)) {
+        if ($collection == 'all' || is_null($collection)) {
           $endpoint = "/brandfolders/{$this->default_brandfolder_id}/assets";
         }
         else {
@@ -295,6 +299,10 @@ class Brandfolder {
           }
 
           return $result;
+        }
+        else {
+          // @todo.
+          return FALSE;
         }
       }
     }
