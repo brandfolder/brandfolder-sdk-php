@@ -211,10 +211,23 @@ class Brandfolder {
 
       $this->status = $response->getStatusCode();
       if ($this->status == 200) {
-        $data = \GuzzleHttp\json_decode($response->getBody()->getContents());
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
 
-        // @todo: Process included data a la listAssets().
-        return $data;
+        // If additional data was included in the response (by request),
+        // process it to make it more useful.
+        // @todo: Assess performance.
+        // @todo: Deduplicate code between this method and listAssets().
+        if (isset($result->included)) {
+          // Structure the included data as an associative array of items
+          // grouped by type and indexed therein by ID.
+          $this->restructureIncludedData($result);
+
+          // Update the asset to contain useful values for each included
+          // attribute rather than just a list of items with IDs.
+          $this->decorateAsset($result->data, $result->included);
+        }
+
+        return $result;
       }
     }
     catch (ClientException $e) {
@@ -226,7 +239,131 @@ class Brandfolder {
   }
 
   /**
-   * Lists multipls assets.
+   * Update an existing attachment.
+   *
+   * @param string $attachment_id
+   * @param string $url
+   * @param string $filename
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/#update-an-attachment
+   */
+  public function updateAttachment($attachment_id, $url = NULL, $filename = NULL) {
+    // @todo: Error handling, centralized.
+    try {
+      $attributes = [];
+      if (!is_null($url)) {
+        $attributes['url'] = $url;
+      }
+      if (!is_null($filename)) {
+        $attributes['filename'] = $filename;
+      }
+      $body = [
+        "data" => [
+          "attributes" => $attributes,
+        ]
+      ];
+      $response = $this->request('PUT', "/attachments/$attachment_id", [], $body);
+
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+        return $result;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
+   * Delete an existing attachment.
+   *
+   * @param string $attachment_id
+   *
+   * @return bool
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/#update-an-attachment
+   */
+  public function deleteAttachment($attachment_id) {
+    // @todo: Error handling, centralized.
+    try {
+      $response = $this->request('DELETE', "/attachments/$attachment_id");
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        return TRUE;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+
+    return TRUE;
+  }
+
+  /**
+   * Update an existing asset.
+   *
+   * @param string $asset_id
+   * @param null $name
+   * @param null $description
+   * @param null $attachments
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/#update-an-asset
+   */
+  public function updateAsset($asset_id, $name = NULL, $description = NULL, $attachments = NULL) {
+    // @todo: Error handling, centralized.
+    try {
+      $attributes = [];
+      if (!is_null($name)) {
+        $attributes['name'] = $name;
+      }
+      if (!is_null($description)) {
+        $attributes['description'] = $description;
+      }
+      if (!is_null($attachments)) {
+        $attributes['attachments'] = $attachments;
+      }
+      $body = [
+        "data" => [
+          "attributes" => $attributes,
+        ]
+      ];
+      $response = $this->request('PUT', "/assets/$asset_id", [], $body);
+
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+        return $result;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
+   * Lists multiple assets.
    *
    * @param array $query_params
    * @param string|null $collection
@@ -267,34 +404,12 @@ class Brandfolder {
           if (isset($result->included)) {
             // Structure the included data as an associative array of items
             // grouped by type and indexed therein by ID.
-            $included = [];
-            foreach ($result->included as $item) {
-              $included[$item->type][$item->id] = $item->attributes;
-            }
-            $result->included = $included;
+            $this->restructureIncludedData($result);
 
             // Update each asset to contain useful values for each included
             // attribute rather than just a list of items with IDs.
-            array_walk($result->data, function($asset) use ($included) {
-              foreach ($asset->relationships as $type_label => $data) {
-                foreach ($data->data as $item) {
-                  $type = $item->type;
-                  if (isset($included[$type][$item->id])) {
-                    $attributes = $included[$type][$item->id];
-                    // For custom field values, set up a convenient array keyed
-                    // by field keys and containing field values. If users
-                    // need to know the unique ID of a particular custom field
-                    // instance, they can still look in $asset->relationships.
-                    if ($type == 'custom_field_values') {
-                      $key = $attributes->key;
-                      $asset->{$type}[$key] = $attributes->value;
-                    }
-                    else {
-                      $asset->{$type}[$item->id] = $attributes;
-                    }
-                  }
-                }
-              }
+            array_walk($result->data, function($asset) use ($result) {
+              $this->decorateAsset($asset, $result->included);
             });
           }
 
@@ -311,6 +426,63 @@ class Brandfolder {
       $this->message = $e->getMessage();
 
       return FALSE;
+    }
+  }
+
+  /**
+   * Structure included data as an associative array of items grouped by
+   * type and indexed therein by ID.
+   *
+   * @param $result
+   */
+  protected function restructureIncludedData(&$result) {
+    $included = [];
+    foreach ($result->included as $item) {
+      $included[$item->type][$item->id] = $item->attributes;
+    }
+    $result->included = $included;
+  }
+
+  /**
+   * Update an asset to contain useful values for each included
+   * attribute rather than just a list of items with IDs.
+   *
+   * @param $asset
+   * @param $included_data
+   */
+  protected function decorateAsset(&$asset, $included_data) {
+    foreach ($asset->relationships as $type_label => $data) {
+      foreach ($data->data as $item) {
+        $type = $item->type;
+        if (isset($included_data[$type][$item->id])) {
+          $attributes = $included_data[$type][$item->id];
+          // For custom field values, set up a convenient array keyed
+          // by field keys and containing field values. If users
+          // need to know the unique ID of a particular custom field
+          // instance, they can still look in $asset->relationships.
+          if ($type == 'custom_field_values') {
+            $key = $attributes->key;
+            $asset->{$type}[$key] = $attributes->value;
+          }
+          else {
+            $attributes->id = $item->id;
+            $asset->{$type}[$item->id] = $attributes;
+          }
+        }
+      }
+    }
+
+    // Sort attachments by position. Retain the useful ID keys.
+    if (isset($asset->attachments) && count($asset->attachments) > 1) {
+      $ordered_attachments = [];
+      $ordered_attachment_ids = [];
+      foreach ($asset->attachments as $attachment) {
+        $ordered_attachments[$attachment->position] = $attachment;
+        $ordered_attachment_ids[$attachment->position] = $attachment->id;
+      }
+      ksort($ordered_attachments);
+      ksort($ordered_attachment_ids);
+      $asset->attachments = array_combine($ordered_attachment_ids, $ordered_attachments);
     }
   }
 
@@ -382,11 +554,7 @@ class Brandfolder {
       $options['query'] = $query_params;
     }
 
-    // @todo: Test.
     if (!is_null($body)) {
-      if (!is_string($body)) {
-        $body = json_encode($body);
-      }
       $options['json'] = $body;
     }
 
