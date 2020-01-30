@@ -408,6 +408,7 @@ class Brandfolder {
 
             // Update each asset to contain useful values for each included
             // attribute rather than just a list of items with IDs.
+            // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
             array_walk($result->data, function($asset) use ($result) {
               $this->decorateAsset($asset, $result->included);
             });
@@ -513,6 +514,88 @@ class Brandfolder {
           // @todo: Don't just return ->data. Also return ->meta or come up with some other way to let consumers use it. It's important for pagination, etc.
           return $data->data;
         }
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
+   * Lists Invitations to an Organization, Brandfolder, or Collection.
+   *
+   * @param array $query_params
+   * @param string|null $organization
+   * @param string|null $brandfolder
+   * @param string|null $collection
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/?http#list-invitations
+   */
+  public function listInvitations($query_params = [], $organization = NULL, $brandfolder = NULL, $collection = NULL) {
+    // @todo: Error handling, centralized.
+    try {
+      if (!is_null($organization)) {
+        // @todo: Store default organization.
+        $endpoint = "/organizations/$organization/invitations";
+      }
+      else {
+        if (is_null($brandfolder, $collection)) {
+          if (!is_null($this->default_brandfolder_id)) {
+            $brandfolder = $this->default_brandfolder_id;
+          }
+          elseif (!is_null($this->default_collection_id)) {
+            $collection = $this->default_collection_id;
+          }
+        }
+        if (!is_null($brandfolder)) {
+          $endpoint = "/brandfolders/{$this->default_brandfolder_id}/invitations";
+        }
+        elseif (!is_null($collection)) {
+          $endpoint = "/collections/{$this->default_collection_id}/invitations";
+        }
+      }
+      if (isset($endpoint)) {
+        $response = $this->request('GET', $endpoint, $query_params);
+
+        $this->status = $response->getStatusCode();
+        if ($this->status == 200) {
+          $result = \GuzzleHttp\json_decode($response->getBody()
+            ->getContents());
+
+          // If additional data was included in the response (by request),
+          // process it to make it more useful.
+          // @todo: Assess performance.
+          if (isset($result->included)) {
+            // Structure the included data as an associative array of items
+            // grouped by type and indexed therein by ID.
+            // @todo: Test.
+            $this->restructureIncludedData($result);
+
+            // Update each asset to contain useful values for each included
+            // attribute rather than just a list of items with IDs.
+            // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
+//            array_walk($result->data, function ($asset) use ($result) {
+//              $this->decorateAsset($asset, $result->included);
+//            });
+          }
+
+          return $result;
+        }
+        else {
+          // @todo.
+          return FALSE;
+        }
+      }
+      else {
+
+        return FALSE;
       }
     }
     catch (ClientException $e) {
