@@ -1,9 +1,14 @@
-# PHP library for v4 of the [Brandfolder](https://brandfolder.com) REST API
+# The Official PHP Brandfolder API Wrapper
 
-See [here](https://developers.brandfolder.com) for API documentation.
+[![Brandfolder](https://cdn.brandfolder.io/YUHW9ZNT/as/znoqr595/Primary_Logo.jpg)](https://brandfolder.com)
+
+## References
+
+- Brandfolder [API Documentation](https://developers.brandfolder.com)
 
 ## Requirements
 
+- Brandfolder account
 - PHP 7.0 or greater
 - [Composer](https://getcomposer.org)
 - [Guzzle](https://github.com/guzzle/guzzle)
