@@ -2,6 +2,10 @@
 
 [![Brandfolder](https://cdn.brandfolder.io/YUHW9ZNT/as/znoqr595/Primary_Logo.jpg)](https://brandfolder.com)
 
+## Description
+
+This project is under active development.
+
 ## References
 
 - Brandfolder [API Documentation](https://developers.brandfolder.com)

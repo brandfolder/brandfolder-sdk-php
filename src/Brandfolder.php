@@ -313,6 +313,36 @@ class Brandfolder {
     return TRUE;
   }
 
+    /**
+   * Deletes an asset.
+   *
+   * @param $asset_id
+   *
+   * @return bool
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/#delete-an-asset
+   */
+  public function deleteAsset($asset_id, $query_params = []) {
+    // @todo: Error handling, centralized.
+    try {
+      $response = $this->request('DELETE', "/assets/$asset_id");
+      $this->status = $response->getStatusCode();
+
+      if ($this->status == 200) {
+        return TRUE;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+    return TRUE;
+  }
+
   /**
    * Update an existing asset.
    *

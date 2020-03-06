@@ -12,6 +12,11 @@
       "email": "nathanael@orientier.com",
       "homepage": "https://www.orientier.com",
       "role": "Developer"
+    },
+    {
+      "name": "Milvio Bello",
+      "email": "milvio@orientier.com",
+      "role": "Tester"
     }
   ],
   "require": {
