@@ -483,7 +483,10 @@ class Brandfolder {
    */
   protected function decorateAsset(&$asset, $included_data) {
     foreach ($asset->relationships as $type_label => $data) {
-      foreach ($data->data as $item) {
+      // Data here will either be an array of objects or a single object.
+      // In the latter case, wrap in an array for consistency.
+      $items = is_array($data->data) ? $data->data : [$data->data];
+      foreach ($items as $item) {
         $type = $item->type;
         if (isset($included_data[$type][$item->id])) {
           $attributes = $included_data[$type][$item->id];
