@@ -325,6 +325,8 @@ class Brandfolder {
    *
    * @return bool|string
    * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developer.brandfolder.com/#create-assets
    */
   public function createAsset($name, $description = NULL, $attachments, $section, $brandfolder = NULL, $collection = NULL) {
     $asset = [
@@ -359,6 +361,8 @@ class Brandfolder {
    *
    * @return bool|string
    * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developer.brandfolder.com/#create-assets
    */
   public function createAssets($assets, $section, $brandfolder = NULL, $collection = NULL) {
     // @todo: Error handling, centralized.
@@ -455,6 +459,88 @@ class Brandfolder {
       return FALSE;
     }
   }
+
+  /**
+   * Add custom field values to an asset.
+   *
+   * @param string $asset_id
+   * @param array $custom_field_values
+   *
+   * @return bool|object
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developer.brandfolder.com/#create-custom-fields-for-an-asset
+   */
+  public function addCustomFieldsToAsset($asset_id, $custom_field_values) {
+    try {
+      $attributes = [];
+      foreach ($custom_field_values as $key => $value) {
+        $attributes[] = [
+          'key' => $key,
+          'value' => $value,
+        ];
+      }
+      $body = [
+        "data" => [
+          "attributes" => $attributes,
+        ]
+      ];
+      $response = $this->request('POST', "/assets/$asset_id/custom_fields", [], $body);
+
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+        return $result;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+  /**
+   * Add one or more assets to a label.
+   *
+   * @param array $asset_ids
+   * @param string $label
+   *  The ID/key of the label to which the given assets should be added.
+   *  @todo: Allow users to provide the human-readable label name if desired.
+   *
+   * @return bool|object
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @todo: Add to online documentation?
+   */
+  public function addAssetsToLabel($asset_ids, $label) {
+    try {
+      $body = [
+        "data" => [
+          "asset_keys" => $asset_ids,
+          "label_key" => $label,
+        ]
+      ];
+      $response = $this->request('POST', "/bulk_actions/assets/add_to_label", [], $body);
+
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+        return $result;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+  }
+
+
 
   /**
    * Delete an asset.
