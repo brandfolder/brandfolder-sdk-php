@@ -313,25 +313,90 @@ class Brandfolder {
     return TRUE;
   }
 
-    /**
-   * Deletes an asset.
+  /**
+   * Create a new asset.
    *
-   * @param $asset_id
+   * @param string $name
+   * @param string $description
+   * @param array $attachments
+   * @param string $section
+   * @param string $brandfolder
+   * @param string $collection
    *
-   * @return bool
-   *
+   * @return bool|string
    * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/#delete-an-asset
    */
-  public function deleteAsset($asset_id, $query_params = []) {
+  public function createAsset($name, $description = NULL, $attachments, $section, $brandfolder = NULL, $collection = NULL) {
+    $asset = [
+      'name' => $name,
+      'attachments' => $attachments,
+    ];
+    if (!is_null($description)) {
+      $asset['description'] = $description;
+    }
+    $assets = [$asset];
+
+    $result = $this->createAssets($assets, $section, $brandfolder, $collection);
+    if ($result && is_array($result->data)) {
+
+      return $result->data[0];
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * Create multiple new assets in one operation.
+   *
+   * @param array $assets
+   *  Array consisting of:
+   *    'name' (string)
+   *    'description' (optional string)
+   *    'attachments' (array)
+   * @param string $section
+   * @param string $brandfolder
+   * @param string $collection
+   *
+   * @return bool|string
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   */
+  public function createAssets($assets, $section, $brandfolder = NULL, $collection = NULL) {
     // @todo: Error handling, centralized.
     try {
-      $response = $this->request('DELETE', "/assets/$asset_id");
-      $this->status = $response->getStatusCode();
+      if (is_null($brandfolder) && is_null($collection)) {
+        if (!is_null($this->default_brandfolder_id)) {
+          $brandfolder = $this->default_brandfolder_id;
+        }
+        elseif (!is_null($this->default_collection_id)) {
+          $collection = $this->default_collection_id;
+        }
+      }
+      if (!is_null($brandfolder)) {
+        $endpoint = "/brandfolders/{$brandfolder}/assets";
+      }
+      elseif (!is_null($collection)) {
+        $endpoint = "/collections/{$collection}/assets";
+      }
+      if (is_null($endpoint)) {
+        $this->message = 'A Brandfolder or a collection must be specified when creating an asset.';
 
+        return FALSE;
+      }
+
+      $body = [
+        "data" => [
+          "attributes" => $assets,
+        ],
+        "section_key" => $section,
+      ];
+
+      $response = $this->request('POST', $endpoint, [], $body);
+
+      $this->status = $response->getStatusCode();
       if ($this->status == 200) {
-        return TRUE;
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+
+        return $result;
       }
     }
     catch (ClientException $e) {
@@ -340,7 +405,6 @@ class Brandfolder {
 
       return FALSE;
     }
-    return TRUE;
   }
 
   /**
@@ -393,7 +457,38 @@ class Brandfolder {
   }
 
   /**
-   * Lists multiple assets.
+   * Delete an asset.
+   *
+   * @param $asset_id
+   *
+   * @return bool
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/#delete-an-asset
+   */
+  public function deleteAsset($asset_id, $query_params = []) {
+    // @todo: Error handling, centralized.
+    try {
+      $response = $this->request('DELETE', "/assets/$asset_id");
+      $this->status = $response->getStatusCode();
+
+      if ($this->status == 200) {
+        return TRUE;
+      }
+    }
+    catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
+    }
+    return TRUE;
+  }
+
+
+  /**
+   * List multiple assets.
    *
    * @param array $query_params
    * @param string|null $collection
