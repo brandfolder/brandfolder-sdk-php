@@ -1,4 +1,8 @@
-# The Official Python Brandfolder SDK
+# The Official PHP Brandfolder SDK
+
+[![GitHub](https://img.shields.io/github/license/brandfolder/brandfolder-sdk-php)](https://github.com/brandfolder/brandfolder-sdk-php/blob/master/LICENSE)
+[![PHP Composer Testing](https://github.com/brandfolder/brandfolder-sdk-php/workflows/PHP%20Composer%20Testing/badge.svg)](https://github.com/brandfolder/brandfolder-sdk-php/actions?query=workflow%3A%22PHP+Composer+Testing%22)
+[![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/brandfolder/brandfolder-sdk-php)](https://packagist.org/packages/brandfolder/brandfolder-sdk-php)
 
 [![Brandfolder](https://cdn.brandfolder.io/YUHW9ZNT/as/znoqr595/Primary_Brandfolder_Logo.png?width=400)](https://brandfolder.com)
 
@@ -29,6 +33,3 @@ installing Composer, run the following command from the library root:
 `composer install`
 or
 `composer install --ignore-platform-reqs`
-
-## Status
-![PHP Composer Testing](https://github.com/brandfolder/brandfolder-sdk-php/workflows/PHP%20Composer%20Testing/badge.svg)
