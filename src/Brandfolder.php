@@ -115,6 +115,7 @@ class Brandfolder {
    * Gets Brandfolders to which the current user has access.
    *
    * @param array $query_params
+   *
    * @return array
    *
    * @throws \GuzzleHttp\Exception\GuzzleException
@@ -146,6 +147,7 @@ class Brandfolder {
    * Gets Collections to which the current user has access.
    *
    * @param array $query_params
+   *
    * @return ResponseInterface
    *
    * @throws \GuzzleHttp\Exception\GuzzleException
@@ -160,6 +162,7 @@ class Brandfolder {
    * Gets Collections belonging to a certain Brandfolder.
    *
    * @param array $query_params
+   *
    * @return bool|array
    *
    * @throws \GuzzleHttp\Exception\GuzzleException
@@ -229,8 +232,7 @@ class Brandfolder {
 
         return $result;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -264,7 +266,7 @@ class Brandfolder {
       $body = [
         "data" => [
           "attributes" => $attributes,
-        ]
+        ],
       ];
       $response = $this->request('PUT', "/attachments/$attachment_id", [], $body);
 
@@ -274,8 +276,48 @@ class Brandfolder {
 
         return $result;
       }
+    } catch (ClientException $e) {
+      $this->status = $e->getCode();
+      $this->message = $e->getMessage();
+
+      return FALSE;
     }
-    catch (ClientException $e) {
+  }
+
+  /**
+   * Fetch an existing attachment.
+   *
+   * @param string $attachment_id
+   * @param array|null $params
+   *
+   * @return bool|mixed
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/#update-an-attachment
+   */
+  public function fetchAttachment(string $attachment_id, $params = []) {
+    // @todo: Error handling, centralized.
+    try {
+      $response = $this->request('GET', "/attachments/$attachment_id", $params);
+
+      $this->status = $response->getStatusCode();
+      if ($this->status == 200) {
+        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+        $this->restructureIncludedData($result);
+
+        // Update the attachment to contain useful values for each included
+        // attribute rather than just a list of items with IDs.
+        // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
+        array_walk(
+          $result->data, function ($asset) use ($result) {
+          $this->decorateAttachment($asset, $result->included);
+        }
+        );
+
+        return $result;
+      }
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -302,8 +344,7 @@ class Brandfolder {
       if ($this->status == 200) {
         return TRUE;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -330,7 +371,7 @@ class Brandfolder {
    */
   public function createAsset($name, $description = NULL, $attachments, $section, $brandfolder = NULL, $collection = NULL) {
     $asset = [
-      'name' => $name,
+      'name'        => $name,
       'attachments' => $attachments,
     ];
     if (!is_null($description)) {
@@ -388,7 +429,7 @@ class Brandfolder {
       }
 
       $body = [
-        "data" => [
+        "data"        => [
           "attributes" => $assets,
         ],
         "section_key" => $section,
@@ -402,8 +443,7 @@ class Brandfolder {
 
         return $result;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -441,7 +481,7 @@ class Brandfolder {
       $body = [
         "data" => [
           "attributes" => $attributes,
-        ]
+        ],
       ];
       $response = $this->request('PUT', "/assets/$asset_id", [], $body);
 
@@ -451,8 +491,7 @@ class Brandfolder {
 
         return $result;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -476,14 +515,14 @@ class Brandfolder {
       $attributes = [];
       foreach ($custom_field_values as $key => $value) {
         $attributes[] = [
-          'key' => $key,
+          'key'   => $key,
           'value' => $value,
         ];
       }
       $body = [
         "data" => [
           "attributes" => $attributes,
-        ]
+        ],
       ];
       $response = $this->request('POST', "/assets/$asset_id/custom_fields", [], $body);
 
@@ -493,8 +532,7 @@ class Brandfolder {
 
         return $result;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -508,10 +546,11 @@ class Brandfolder {
    * @param array $asset_ids
    * @param string $label
    *  The ID/key of the label to which the given assets should be added.
-   *  @todo: Allow users to provide the human-readable label name if desired.
    *
    * @return bool|object
    * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @todo: Allow users to provide the human-readable label name if desired.
    *
    * @todo: Add to online documentation?
    */
@@ -520,8 +559,8 @@ class Brandfolder {
       $body = [
         "data" => [
           "asset_keys" => $asset_ids,
-          "label_key" => $label,
-        ]
+          "label_key"  => $label,
+        ],
       ];
       $response = $this->request('POST', "/bulk_actions/assets/add_to_label", [], $body);
 
@@ -531,15 +570,13 @@ class Brandfolder {
 
         return $result;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
       return FALSE;
     }
   }
-
 
 
   /**
@@ -562,8 +599,7 @@ class Brandfolder {
       if ($this->status == 200) {
         return TRUE;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -607,7 +643,8 @@ class Brandfolder {
 
         $this->status = $response->getStatusCode();
         if ($this->status == 200) {
-          $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+          $result = \GuzzleHttp\json_decode($response->getBody()
+            ->getContents());
 
           // If additional data was included in the response (by request),
           // process it to make it more useful.
@@ -620,9 +657,11 @@ class Brandfolder {
             // Update each asset to contain useful values for each included
             // attribute rather than just a list of items with IDs.
             // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
-            array_walk($result->data, function($asset) use ($result) {
+            array_walk(
+              $result->data, function ($asset) use ($result) {
               $this->decorateAsset($asset, $result->included);
-            });
+            }
+            );
           }
 
           return $result;
@@ -632,8 +671,7 @@ class Brandfolder {
           return FALSE;
         }
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -702,6 +740,29 @@ class Brandfolder {
   }
 
   /**
+   * Update an attachment to contain useful values for each included
+   * attribute rather than just a list of items with IDs.
+   *
+   * @param $attachment
+   * @param $included_data
+   */
+  protected function decorateAttachment(&$attachment, $included_data) {
+    foreach ($attachment->relationships as $type_label => $data) {
+      // Data here will either be an array of objects or a single object.
+      // In the latter case, wrap in an array for consistency.
+      $items = is_array($data->data) ? $data->data : [$data->data];
+      foreach ($items as $item) {
+        $type = $item->type;
+        if (isset($included_data[$type][$item->id])) {
+          $attributes = $included_data[$type][$item->id];
+          $attributes->id = $item->id;
+          $attachment->{$type_label}[$item->id] = $attributes;
+        }
+      }
+    }
+  }
+
+  /**
    * Retrieves tags used in a Brandfolder.
    *
    * @param array $query_params
@@ -729,8 +790,7 @@ class Brandfolder {
           return $data->data;
         }
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -780,8 +840,10 @@ class Brandfolder {
 
         $this->status = $response->getStatusCode();
         if ($this->status == 200) {
-          $result = \GuzzleHttp\json_decode($response->getBody()
-            ->getContents());
+          $result = \GuzzleHttp\json_decode(
+            $response->getBody()
+              ->getContents()
+          );
 
           // If additional data was included in the response (by request),
           // process it to make it more useful.
@@ -795,9 +857,9 @@ class Brandfolder {
             // Update each asset to contain useful values for each included
             // attribute rather than just a list of items with IDs.
             // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
-//            array_walk($result->data, function ($asset) use ($result) {
-//              $this->decorateAsset($asset, $result->included);
-//            });
+            //            array_walk($result->data, function ($asset) use ($result) {
+            //              $this->decorateAsset($asset, $result->included);
+            //            });
           }
 
           return $result;
@@ -811,8 +873,7 @@ class Brandfolder {
 
         return FALSE;
       }
-    }
-    catch (ClientException $e) {
+    } catch (ClientException $e) {
       $this->status = $e->getCode();
       $this->message = $e->getMessage();
 
@@ -841,9 +902,9 @@ class Brandfolder {
     $options = [
       'headers' => [
         'Authorization' => 'Bearer ' . $this->api_key,
-        'Host' => 'brandfolder.com',
-        'Accept' => 'application/json',
-        'Content-Type' => 'application/json'
+        'Host'          => 'brandfolder.com',
+        'Accept'        => 'application/json',
+        'Content-Type'  => 'application/json',
       ],
     ];
 
