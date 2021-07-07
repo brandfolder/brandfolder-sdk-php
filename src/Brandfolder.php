@@ -2,162 +2,62 @@
 
 namespace Brandfolder;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\ClientException;
-use Psr\Http\Message\ResponseInterface;
+use Brandfolder\BrandfolderClient;
 
 /**
- * Brandfolder library.
+ * Represents an individual "Brandfolder."
  *
  * @package Brandfolder
  */
 class Brandfolder {
 
-  const VERSION = '0.1.0';
+  /**
+   * Brandfolder API client.
+   *
+   * @var BrandfolderClient $bf_client
+   */
+  public $bf_client;
 
   /**
-   * API version.
+   * Unique identifier for the Brandfolder.
    *
-   * @var string $version
+   * @var string $id
    */
-  public $version = self::VERSION;
+  public $id;
 
   /**
-   * The status code of the most recent operation, if applicable.
+   * @todo
    *
-   * @var int $status
+   * The Brandfolder's human-readable name.
+   *
+   * @var string $name
    */
-  public $status;
+  public $name;
 
   /**
-   * A useful message pertaining to the most recent operation, if applicable.
+   * @todo
    *
-   * @var string $message
+   * The Brandfolder's slug (used in its URL).
+   *
+   * @var string $slug
    */
-  public $message;
-
-  /**
-   * HTTP client.
-   *
-   * @var ClientInterface $client
-   */
-  protected $client;
-
-  /**
-   * The REST API endpoint.
-   *
-   * @var string $endpoint
-   */
-  protected $endpoint = 'https://brandfolder.com/api/v4';
-
-  /**
-   * The Brandfolder API key with which to authenticate
-   * (used as a bearer token).
-   *
-   * @var string $api_key
-   */
-  private $api_key;
-
-  /**
-   * The Brandfolder to use for Brandfolder-specific requests, when no other
-   * Brandfolder is specified.
-   *
-   * @var string $default_brandfolder_id
-   *
-   * @todo setBrandfolder() method.
-   */
-  public $default_brandfolder_id;
-
-  /**
-   * The collection to use for collection-specific requests, when no other
-   * collection is specified.
-   *
-   * @var string $default_collection_id
-   *
-   * @todo setCollection() method.
-   */
-  public $default_collection_id;
+  public $slug;
 
   /**
    * Brandfolder constructor.
    *
-   * @param string $api_key
-   * @param \GuzzleHttp\ClientInterface|NULL $client
+   * @param string $brandfolder_id
+   * @param BrandfolderClient $BfClient
+   *
+   * @todo: Create new Brandfolder if ID is null.
    */
-  public function __construct($api_key, $brandfolder_id = NULL, ClientInterface $client = NULL) {
+  public function __construct(string $brandfolder_id, BrandfolderClient $brandfolder_client) {
     $this->api_key = $api_key;
-
-    if (!is_null($brandfolder_id)) {
-      $this->default_brandfolder_id = $brandfolder_id;
-    }
-
-    if (is_null($client)) {
-      $client = new Client();
-    }
-    $this->client = $client;
+    $this->bf_client = $brandfolder_client;
   }
 
   /**
-   * Gets Brandfolder Organizations to which the current user belongs.
-   *
-   * @return ResponseInterface
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/?http#list-organizations
-   */
-  public function getOrganizations($query_params = []) {
-    return $this->request('GET', '/organizations', $query_params);
-  }
-
-  /**
-   * Gets Brandfolders to which the current user has access.
-   *
-   * @param array $query_params
-   * @return array
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/?http#list-brandfolders
-   */
-  public function getBrandfolders($query_params = []) {
-    $response = $this->request('GET', '/brandfolders', $query_params);
-    $this->status = $response->getStatusCode();
-    if ($this->status == 200) {
-      $brandfolders = [];
-      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
-      if (isset($content->data)) {
-        foreach ($content->data as $bf_data) {
-          $brandfolders[$bf_data->id] = $bf_data->attributes->name;
-        }
-      }
-
-      return $brandfolders;
-    }
-    else {
-      $this->message = $response->getReasonPhrase();
-
-      return FALSE;
-    }
-  }
-
-  /**
-   * Gets Collections to which the current user has access.
-   *
-   * @param array $query_params
-   * @return ResponseInterface
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/?http#list-collections
-   */
-  public function getCollectionsForUser($query_params = []) {
-    return $this->request('GET', '/collections', $query_params);
-  }
-
-  /**
-   * Gets Collections belonging to a certain Brandfolder.
+   * Gets Collections belonging this Brandfolder.
    *
    * @param array $query_params
    * @return bool|array
@@ -166,19 +66,11 @@ class Brandfolder {
    *
    * @see https://developers.brandfolder.com/?http#list-collections
    */
-  public function getCollectionsInBrandfolder($brandfolder_id = NULL, $query_params = []) {
-    if (is_null($brandfolder_id)) {
-      // @todo $this->getBrandfolder().
-      $brandfolder_id = $this->default_brandfolder_id;
-    }
-
-    $response = $this->request('GET', "/brandfolders/{$brandfolder_id}/collections", $query_params);
-    $this->status = $response->getStatusCode();
-    if ($this->status == 200) {
+  public function getCollections($query_params = []) {
+    if ($result = $this->bf_client->request('GET', "/brandfolders/{$this->id}/collections", $query_params)) {
       $collections = [];
-      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
-      if (isset($content->data)) {
-        foreach ($content->data as $collection_data) {
+      if (isset($result->data)) {
+        foreach ($result->data as $collection_data) {
           $collections[$collection_data->id] = $collection_data->attributes->name;
         }
       }
@@ -186,131 +78,9 @@ class Brandfolder {
       return $collections;
     }
     else {
-      $this->message = $response->getReasonPhrase();
 
       return FALSE;
     }
-  }
-
-  /**
-   * Fetches an individual asset.
-   *
-   * @param $asset_id
-   * @param array $query_params
-   *
-   * @return bool|mixed
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/?python#fetch-an-asset
-   */
-  public function fetchAsset($asset_id, $query_params = []) {
-    // @todo: Error handling, centralized.
-    try {
-      $response = $this->request('GET', "/assets/$asset_id", $query_params);
-
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
-
-        // If additional data was included in the response (by request),
-        // process it to make it more useful.
-        // @todo: Assess performance.
-        // @todo: Deduplicate code between this method and listAssets().
-        if (isset($result->included)) {
-          // Structure the included data as an associative array of items
-          // grouped by type and indexed therein by ID.
-          $this->restructureIncludedData($result);
-
-          // Update the asset to contain useful values for each included
-          // attribute rather than just a list of items with IDs.
-          $this->decorateAsset($result->data, $result->included);
-        }
-
-        return $result;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-  }
-
-  /**
-   * Update an existing attachment.
-   *
-   * @param string $attachment_id
-   * @param string $url
-   * @param string $filename
-   *
-   * @return bool|mixed
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/#update-an-attachment
-   */
-  public function updateAttachment($attachment_id, $url = NULL, $filename = NULL) {
-    // @todo: Error handling, centralized.
-    try {
-      $attributes = [];
-      if (!is_null($url)) {
-        $attributes['url'] = $url;
-      }
-      if (!is_null($filename)) {
-        $attributes['filename'] = $filename;
-      }
-      $body = [
-        "data" => [
-          "attributes" => $attributes,
-        ]
-      ];
-      $response = $this->request('PUT', "/attachments/$attachment_id", [], $body);
-
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
-
-        return $result;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-  }
-
-  /**
-   * Delete an existing attachment.
-   *
-   * @param string $attachment_id
-   *
-   * @return bool
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/#update-an-attachment
-   */
-  public function deleteAttachment($attachment_id) {
-    // @todo: Error handling, centralized.
-    try {
-      $response = $this->request('DELETE', "/attachments/$attachment_id");
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        return TRUE;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-
-    return TRUE;
   }
 
   /**
@@ -320,15 +90,12 @@ class Brandfolder {
    * @param string $description
    * @param array $attachments
    * @param string $section
-   * @param string $brandfolder
-   * @param string $collection
    *
-   * @return bool|string
-   * @throws \GuzzleHttp\Exception\GuzzleException
+   * @return bool|mixed
    *
    * @see https://developer.brandfolder.com/#create-assets
    */
-  public function createAsset($name, $description = NULL, $attachments, $section, $brandfolder = NULL, $collection = NULL) {
+  public function createAsset($name, $description = NULL, $attachments, $section) {
     $asset = [
       'name' => $name,
       'attachments' => $attachments,
@@ -338,7 +105,7 @@ class Brandfolder {
     }
     $assets = [$asset];
 
-    $result = $this->createAssets($assets, $section, $brandfolder, $collection);
+    $result = $this->createAssets($assets, $section);
     if ($result && is_array($result->data)) {
 
       return $result->data[0];
@@ -356,306 +123,72 @@ class Brandfolder {
    *    'description' (optional string)
    *    'attachments' (array)
    * @param string $section
-   * @param string $brandfolder
-   * @param string $collection
    *
-   * @return bool|string
-   * @throws \GuzzleHttp\Exception\GuzzleException
+   * @return bool|mixed
    *
    * @see https://developer.brandfolder.com/#create-assets
    */
-  public function createAssets($assets, $section, $brandfolder = NULL, $collection = NULL) {
-    // @todo: Error handling, centralized.
-    try {
-      if (is_null($brandfolder) && is_null($collection)) {
-        if (!is_null($this->default_brandfolder_id)) {
-          $brandfolder = $this->default_brandfolder_id;
-        }
-        elseif (!is_null($this->default_collection_id)) {
-          $collection = $this->default_collection_id;
-        }
-      }
-      if (!is_null($brandfolder)) {
-        $endpoint = "/brandfolders/{$brandfolder}/assets";
-      }
-      elseif (!is_null($collection)) {
-        $endpoint = "/collections/{$collection}/assets";
-      }
-      if (is_null($endpoint)) {
-        $this->message = 'A Brandfolder or a collection must be specified when creating an asset.';
+  public function createAssets($assets, $section) {
+    $endpoint = "/brandfolders/{$this->id}/assets";
 
-        return FALSE;
-      }
+    $body = [
+      "data"        => [
+        "attributes" => $assets,
+      ],
+      "section_key" => $section,
+    ];
 
-      $body = [
-        "data" => [
-          "attributes" => $assets,
-        ],
-        "section_key" => $section,
-      ];
+    if ($result = $this->bf_client->request('POST', $endpoint, [], $body)) {
 
-      $response = $this->request('POST', $endpoint, [], $body);
-
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
-
-        return $result;
-      }
+      return $result;
     }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
+    else {
 
       return FALSE;
     }
   }
 
   /**
-   * Update an existing asset.
-   *
-   * @param string $asset_id
-   * @param null $name
-   * @param null $description
-   * @param null $attachments
-   *
-   * @return bool|mixed
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/#update-an-asset
-   */
-  public function updateAsset($asset_id, $name = NULL, $description = NULL, $attachments = NULL) {
-    // @todo: Error handling, centralized.
-    try {
-      $attributes = [];
-      if (!is_null($name)) {
-        $attributes['name'] = $name;
-      }
-      if (!is_null($description)) {
-        $attributes['description'] = $description;
-      }
-      if (!is_null($attachments)) {
-        $attributes['attachments'] = $attachments;
-      }
-      $body = [
-        "data" => [
-          "attributes" => $attributes,
-        ]
-      ];
-      $response = $this->request('PUT', "/assets/$asset_id", [], $body);
-
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
-
-        return $result;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-  }
-
-  /**
-   * Add custom field values to an asset.
-   *
-   * @param string $asset_id
-   * @param array $custom_field_values
-   *
-   * @return bool|object
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developer.brandfolder.com/#create-custom-fields-for-an-asset
-   */
-  public function addCustomFieldsToAsset($asset_id, $custom_field_values) {
-    try {
-      $attributes = [];
-      foreach ($custom_field_values as $key => $value) {
-        $attributes[] = [
-          'key' => $key,
-          'value' => $value,
-        ];
-      }
-      $body = [
-        "data" => [
-          "attributes" => $attributes,
-        ]
-      ];
-      $response = $this->request('POST', "/assets/$asset_id/custom_fields", [], $body);
-
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
-
-        return $result;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-  }
-
-  /**
-   * Add one or more assets to a label.
-   *
-   * @param array $asset_ids
-   * @param string $label
-   *  The ID/key of the label to which the given assets should be added.
-   *  @todo: Allow users to provide the human-readable label name if desired.
-   *
-   * @return bool|object
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @todo: Add to online documentation?
-   */
-  public function addAssetsToLabel($asset_ids, $label) {
-    try {
-      $body = [
-        "data" => [
-          "asset_keys" => $asset_ids,
-          "label_key" => $label,
-        ]
-      ];
-      $response = $this->request('POST', "/bulk_actions/assets/add_to_label", [], $body);
-
-      $this->status = $response->getStatusCode();
-      if ($this->status == 200) {
-        $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
-
-        return $result;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-  }
-
-
-
-  /**
-   * Delete an asset.
-   *
-   * @param $asset_id
-   *
-   * @return bool
-   *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
-   * @see https://developers.brandfolder.com/#delete-an-asset
-   */
-  public function deleteAsset($asset_id, $query_params = []) {
-    // @todo: Error handling, centralized.
-    try {
-      $response = $this->request('DELETE', "/assets/$asset_id");
-      $this->status = $response->getStatusCode();
-
-      if ($this->status == 200) {
-        return TRUE;
-      }
-    }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
-
-      return FALSE;
-    }
-    return TRUE;
-  }
-
-
-  /**
-   * List multiple assets.
+   * List multiple assets that belong to the Brandfolder.
    *
    * @param array $query_params
-   * @param string|null $collection
-   *  An ID of a collection within which to search for assets, or "all" to look
-   *  throughout the entire Brandfolder. If this param is null, the operation
-   *  will use the previously defined default collection, if applicable.
    *
    * @return bool|mixed
    *
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   *
    * @see https://developers.brandfolder.com/?http#list-assets
-   *
-   * @todo: assets within Brandfolder vs collection vs org
    */
-  public function listAssets($query_params = [], $collection = NULL) {
-    // @todo: Error handling, centralized.
-    try {
-      if (isset($this->default_brandfolder_id)) {
-        if (is_null($collection)) {
-          $collection = $this->default_collection_id;
-        }
-        if ($collection == 'all' || is_null($collection)) {
-          $endpoint = "/brandfolders/{$this->default_brandfolder_id}/assets";
-        }
-        else {
-          $endpoint = "/collections/$collection/assets";
-        }
-        $response = $this->request('GET', $endpoint, $query_params);
+  public function listAssets($query_params = []) {
+    $endpoint = "/brandfolders/{$this->id}/assets";
+    if ($result = $this->bf_client->request('GET', $endpoint, $query_params)) {
+      // If additional data was included in the response (by request),
+      // process it to make it more useful.
+      // @todo: Assess performance.
+      if (isset($result->included)) {
+        // Structure the included data as an associative array of items
+        // grouped by type and indexed therein by ID.
+        $this->bf_client->restructureIncludedData($result);
 
-        $this->status = $response->getStatusCode();
-        if ($this->status == 200) {
-          $result = \GuzzleHttp\json_decode($response->getBody()->getContents());
+        // @todo: Use Asset class.
 
-          // If additional data was included in the response (by request),
-          // process it to make it more useful.
-          // @todo: Assess performance.
-          if (isset($result->included)) {
-            // Structure the included data as an associative array of items
-            // grouped by type and indexed therein by ID.
-            $this->restructureIncludedData($result);
-
-            // Update each asset to contain useful values for each included
-            // attribute rather than just a list of items with IDs.
-            // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
-            array_walk($result->data, function($asset) use ($result) {
-              $this->decorateAsset($asset, $result->included);
-            });
-          }
-
-          return $result;
-        }
-        else {
-          // @todo.
-          return FALSE;
-        }
+        // Update each asset to contain useful values for each included
+        // attribute rather than just a list of items with IDs.
+        // @todo: Make decorateAsset method more generic so it can handle data returned from any API request that supports the "include" param.
+        array_walk($result->data, function($asset) use ($result) {
+          $this->decorateAsset($asset, $result->included);
+        });
       }
+
+      return $result;
     }
-    catch (ClientException $e) {
-      $this->status = $e->getCode();
-      $this->message = $e->getMessage();
+    else {
 
       return FALSE;
     }
   }
 
   /**
-   * Structure included data as an associative array of items grouped by
-   * type and indexed therein by ID.
+   * @todo
    *
-   * @param $result
-   */
-  protected function restructureIncludedData(&$result) {
-    $included = [];
-    foreach ($result->included as $item) {
-      $included[$item->type][$item->id] = $item->attributes;
-    }
-    $result->included = $included;
-  }
-
-  /**
    * Update an asset to contain useful values for each included
    * attribute rather than just a list of items with IDs.
    *
@@ -702,6 +235,8 @@ class Brandfolder {
   }
 
   /**
+   * @todo
+   *
    * Retrieves tags used in a Brandfolder.
    *
    * @param array $query_params
@@ -739,6 +274,8 @@ class Brandfolder {
   }
 
   /**
+   * @todo
+   *
    * Lists Invitations to an Organization, Brandfolder, or Collection.
    *
    * @param array $query_params
@@ -818,44 +355,6 @@ class Brandfolder {
 
       return FALSE;
     }
-  }
-
-  /**
-   * Makes a request to the Brandfolder API.
-   *
-   * @param string $method
-   *  The HTTP method to use for the request.
-   * @param string $path
-   *  The unique component of the API endpoint to use for this request.
-   * @param array|null $query_params
-   *  Associative array of URL query parameters to add to the request.
-   * @param array|null $body
-   *  Associative array of data to be sent as the body of the requests. This
-   *  will be converted to JSON.
-   *
-   * @return ResponseInterface
-   * @throws \GuzzleHttp\Exception\GuzzleException
-   */
-  public function request($method, $path, $query_params = [], $body = NULL) {
-
-    $options = [
-      'headers' => [
-        'Authorization' => 'Bearer ' . $this->api_key,
-        'Host' => 'brandfolder.com',
-        'Accept' => 'application/json',
-        'Content-Type' => 'application/json'
-      ],
-    ];
-
-    if (count($query_params) > 0) {
-      $options['query'] = $query_params;
-    }
-
-    if (!is_null($body)) {
-      $options['json'] = $body;
-    }
-
-    return $this->client->request($method, $this->endpoint . $path, $options);
   }
 
 }
