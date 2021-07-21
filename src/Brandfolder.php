@@ -196,6 +196,52 @@ class Brandfolder {
   }
 
   /**
+   * Gets Sections defined in a given Brandfolder.
+   *
+   * @param string|null $brandfolder_id
+   * @param array $query_params
+   * @param bool $simple_format
+   *  If true, return a flat array whose keys are section IDs and whose values
+   *  are section names.
+   *
+   * @return array|false
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/?http#sections
+   */
+  public function listSectionsInBrandfolder($brandfolder_id = NULL, $query_params = [], $simple_format = FALSE) {
+    if (is_null($brandfolder_id)) {
+      $brandfolder_id = $this->default_brandfolder_id;
+    }
+
+    $response = $this->request('GET', "/brandfolders/{$brandfolder_id}/sections", $query_params);
+    $this->status = $response->getStatusCode();
+    if ($this->status == 200) {
+      $sections = [];
+      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
+      $this->restructureIncludedData($content);
+      if (isset($content->data)) {
+        if ($simple_format) {
+          foreach ($content->data as $section_data) {
+            $sections[$section_data->id] = $section_data->attributes->name;
+          }
+        }
+        else {
+          $sections = $content;
+        }
+      }
+
+      return $sections;
+    }
+    else {
+      $this->message = $response->getReasonPhrase();
+
+      return FALSE;
+    }
+  }
+
+  /**
    * Fetches an individual asset.
    *
    * @param $asset_id
