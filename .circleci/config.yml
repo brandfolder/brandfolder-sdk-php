@@ -1,84 +1,10 @@
-# PHP CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-php/ for more details
-#
-version: 2
-commands:
-  phpcs:
-    description: |
-      Runs PHP code sniffer with the configured settings. Defaults to running
-      only on files containing PHP code.
-      This command expects the PHP CodeSniffer package to be installed with
-      composer. The command will not install these packages for you.
-    parameters:
-      extensions:
-        description: |
-          Extensions to run the sniffs on, the defaults are common files that
-          may include PHP code.
-        type: string
-        default: php
-      ignore:
-        description: |
-          Files and folders to ignore when running the sniffs, the default will
-          ignore common folders that may exist in a theme or module that is
-          not custom code like build files and node modules.
-        type: string
-        default: ''
-      paths:
-        description: Paths to run the sniffs on.
-        type: string
-        default: 'src'
-#      standard:
-#        description: |
-#          The code standard to use when sniffing.
-#        type: string
-#        default: './vendor/drupal/coder/coder_sniffer/Drupal/ruleset.xml'
-    steps:
-      - run:
-          name: 'Running PHP CodeSniffer'
-          command: |
-            mkdir -p ~/phpcs
-            phpcs --standard=<< parameters.standard >> --extensions=<< parameters.extensions >> --ignore=<< parameters.ignore >> --report-junit=$HOME/phpcs/junit.xml << parameters.paths >>
-      - store_test_results:
-          path: ~/phpcs
-      - store_artifacts:
-          path: ~/phpcs
-
+version: 2.1
 jobs:
   build:
     docker:
-      # Specify the version you desire here
-      - image: circleci/php:7.4-node-browsers
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # Using the RAM variation mitigates I/O contention
-      # for database intensive operations.
-      # - image: circleci/mysql:5.7-ram
-      #
-      # - image: redis:2.8.19
-
+      - image: alpine:3.7
     steps:
-      - checkout
-
-      - run: sudo apt update # PHP CircleCI 2.0 Configuration File# PHP CircleCI 2.0 Configuration File sudo apt install zlib1g-dev libsqlite3-dev
-      - run: sudo docker-php-ext-install zip
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            # "composer.lock" can be used if it is committed to the repo
-            - v1-dependencies-{{ checksum "composer.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-
-      # Install PHP Codesniffer.
-      - run: composer global require "squizlabs/php_codesniffer=*"
-      - run: composer global require dealerdirect/phpcodesniffer-composer-installer
-      - run: composer install -n --prefer-dist
-      # Add phpcs and phpcbf commands to the PATH, this will allow for these commands to be used globally.
-      - run: echo 'export PATH="$PATH:$HOME/.composer/vendor/bin"' >> $BASH_ENV
-      # Run sniff tests.
-      - run: cd $HOME/project
-      - run: phpcs --standard=PSR2 --ignore=/vendor ./ --extensions=php
+      - run:
+          name: Barest Config Passthrough
+          command: |
+            echo 'CircleCI proceeding...'
