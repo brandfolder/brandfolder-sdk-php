@@ -201,7 +201,7 @@ class Brandfolder {
    * @param string|null $brandfolder_id
    * @param array $query_params
    * @param bool $simple_format
-   *  If true, return a flat array whose keys are section IDs and whose values
+   *  If true, return a flat array whose keys are section IDs and whose values 
    *  are section names.
    *
    * @return array|false
@@ -214,7 +214,7 @@ class Brandfolder {
     if (is_null($brandfolder_id)) {
       $brandfolder_id = $this->default_brandfolder_id;
     }
-
+    
     $response = $this->request('GET', "/brandfolders/{$brandfolder_id}/sections", $query_params);
     $this->status = $response->getStatusCode();
     if ($this->status == 200) {
@@ -733,8 +733,10 @@ class Brandfolder {
    */
   protected function restructureIncludedData(&$result) {
     $included = [];
-    foreach ($result->included as $item) {
-      $included[$item->type][$item->id] = $item->attributes;
+    if (isset($result->included) && is_array($result->included)) {
+      foreach ($result->included as $item) {
+        $included[$item->type][$item->id] = $item->attributes;
+      }
     }
     $result->included = $included;
   }
@@ -747,25 +749,27 @@ class Brandfolder {
    * @param $included_data
    */
   protected function decorateAsset(&$asset, $included_data) {
-    foreach ($asset->relationships as $type_label => $data) {
-      // Data here will either be an array of objects or a single object.
-      // In the latter case, wrap in an array for consistency.
-      $items = is_array($data->data) ? $data->data : [$data->data];
-      foreach ($items as $item) {
-        $type = $item->type;
-        if (isset($included_data[$type][$item->id])) {
-          $attributes = $included_data[$type][$item->id];
-          // For custom field values, set up a convenient array keyed
-          // by field keys and containing field values. If users
-          // need to know the unique ID of a particular custom field
-          // instance, they can still look in $asset->relationships.
-          if ($type == 'custom_field_values') {
-            $key = $attributes->key;
-            $asset->{$type}[$key] = $attributes->value;
-          }
-          else {
-            $attributes->id = $item->id;
-            $asset->{$type}[$item->id] = $attributes;
+    if (isset($asset->relationships) && is_object($asset->relationships)) {
+      foreach ($asset->relationships as $type_label => $data) {
+        // Data here will either be an array of objects or a single object.
+        // In the latter case, wrap in an array for consistency.
+        $items = is_array($data->data) ? $data->data : [$data->data];
+        foreach ($items as $item) {
+          $type = $item->type;
+          if (isset($included_data[$type][$item->id])) {
+            $attributes = $included_data[$type][$item->id];
+            // For custom field values, set up a convenient array keyed
+            // by field keys and containing field values. If users
+            // need to know the unique ID of a particular custom field
+            // instance, they can still look in $asset->relationships.
+            if ($type == 'custom_field_values') {
+              $key = $attributes->key;
+              $asset->{$type}[$key] = $attributes->value;
+            }
+            else {
+              $attributes->id = $item->id;
+              $asset->{$type}[$item->id] = $attributes;
+            }
           }
         }
       }
@@ -793,16 +797,18 @@ class Brandfolder {
    * @param $included_data
    */
   protected function decorateAttachment(&$attachment, $included_data) {
-    foreach ($attachment->relationships as $type_label => $data) {
-      // Data here will either be an array of objects or a single object.
-      // In the latter case, wrap in an array for consistency.
-      $items = is_array($data->data) ? $data->data : [$data->data];
-      foreach ($items as $item) {
-        $type = $item->type;
-        if (isset($included_data[$type][$item->id])) {
-          $attributes = $included_data[$type][$item->id];
-          $attributes->id = $item->id;
-          $attachment->{$type_label}[$item->id] = $attributes;
+    if (isset($attachment->relationships) && is_array($attachment->relationships)) {
+      foreach ($attachment->relationships as $type_label => $data) {
+        // Data here will either be an array of objects or a single object.
+        // In the latter case, wrap in an array for consistency.
+        $items = is_array($data->data) ? $data->data : [$data->data];
+        foreach ($items as $item) {
+          $type = $item->type;
+          if (isset($included_data[$type][$item->id])) {
+            $attributes = $included_data[$type][$item->id];
+            $attributes->id = $item->id;
+            $attachment->{$type_label}[$item->id] = $attributes;
+          }
         }
       }
     }
