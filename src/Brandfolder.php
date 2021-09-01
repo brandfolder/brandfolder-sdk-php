@@ -242,6 +242,76 @@ class Brandfolder {
   }
 
   /**
+   * Gets Labels defined in a given Brandfolder, strctured as a nested
+   * asssociative array.
+   *
+   * @param string|null $brandfolder_id
+   * @param bool $simple_format
+   *  If true, return a flat array keyed by label IDs and containing label 
+   *  names. 
+   *
+   * @return array|false
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developers.brandfolder.com/?http#list-labels
+   */
+  public function listLabelsInBrandfolder($brandfolder_id = NULL, $simple_format = FALSE) {
+    if (is_null($brandfolder_id)) {
+      $brandfolder_id = $this->default_brandfolder_id;
+    }
+    
+    $response = $this->request('GET', "/brandfolders/{$brandfolder_id}/labels");
+    $this->status = $response->getStatusCode();
+    if ($this->status == 200) {
+      $structured_labels = [];
+      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
+      if (isset($content->data)) {
+        if ($simple_format) {
+          foreach ($content->data as $label) {
+            $structured_labels[$label->id] = $label->attributes->name;
+          }
+        }
+        else {
+          $labels_by_tier = [];
+          foreach ($content->data as $label) {
+            $labels_by_tier[$label->attributes->depth][] = $label;
+          }
+          foreach ($labels_by_tier as $tier => $labels) {
+            foreach ($labels as $label) {
+              $lineage = $label->attributes->path;
+              // Remove the label itself from the end of the path array.
+              array_pop($lineage);
+              // Walk through the path/lineage and place the label in the
+              // appropriate spot.
+              $ancestor =& $structured_labels;
+              while (count($lineage) > 0) {
+                $younger_ancestor = array_shift($lineage);
+                if (isset($ancestor['children'][$younger_ancestor])) {
+                  $ancestor =& $ancestor['children'][$younger_ancestor];
+                }
+                else {
+                  break;
+                }
+              }
+              $ancestor['children'][$label->id] = [
+                'label' => $label,
+              ];
+            }
+          }
+        }
+      }
+
+      return $structured_labels;
+    }
+    else {
+      $this->message = $response->getReasonPhrase();
+
+      return FALSE;
+    }
+  }
+
+  /**
    * Fetches an individual asset.
    *
    * @param $asset_id
