@@ -275,7 +275,7 @@ class Brandfolder {
         else {
           $labels_by_tier = [];
           foreach ($content->data as $label) {
-            $labels_by_tier[$label->attributes->depth][] = $label;
+            $labels_by_tier[$label->attributes->depth][$label->attributes->position] = $label;
           }
           foreach ($labels_by_tier as $tier => $labels) {
             foreach ($labels as $label) {
@@ -294,10 +294,16 @@ class Brandfolder {
                   break;
                 }
               }
-              $ancestor['children'][$label->id] = [
+              $label_item = [
                 'label' => $label,
               ];
+              $ancestor['children'][$label->id] = $label_item;
             }
+          }
+          // The top-level of the array should consist of label items. There is
+          // no need for a "children" sub-array.
+          if (isset($structured_labels['children']) && is_array($structured_labels['children'])) {
+            $structured_labels = $structured_labels['children'];
           }
         }
       }
