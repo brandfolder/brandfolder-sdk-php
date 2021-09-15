@@ -242,6 +242,74 @@ class Brandfolder {
   }
 
   /**
+   * Gets custom field data for a Brandfolder.
+   *
+   * @param string|null $brandfolder_id
+   * @param bool $include_values
+   * @param bool $simple_format
+   *  If true, return a simple array. The format of this array depends on the
+   *  $include_values param. If true, return an array whose keys are custom
+   *  field names and whose values are arrays of all the values that currently
+   *  exist in Brandfolder for a given field. If false, return an array whose
+   *  keys are custom field ids and whose values are custom field names.
+   *
+   * @return array|false
+   *
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   *
+   * @see https://developer.brandfolder.com/docs/#list-custom-field-keys-for-a-brandfolder
+   */
+  public function listCustomFields($brandfolder_id = NULL, bool $include_values = FALSE, $simple_format = FALSE) {
+    if (is_null($brandfolder_id)) {
+      $brandfolder_id = $this->default_brandfolder_id;
+    }
+
+    $query_params = [];
+    if ($include_values) {
+      $query_params['fields'] = 'values';
+      // @todo: Determine whether we really need both of these.
+      $query_params['include'] = 'custom_field_values';
+    }
+
+    $response = $this->request('GET', "/brandfolders/{$brandfolder_id}/custom_field_keys", $query_params);
+    $this->status = $response->getStatusCode();
+    if ($this->status == 200) {
+      $custom_fields = [];
+      $content = \GuzzleHttp\json_decode($response->getBody()->getContents());
+      $this->restructureIncludedData($content);
+      if (isset($content->data)) {
+        if ($simple_format) {
+          // Array whose keys are custom field names and whose values are arrays
+          // of all the values that currently exist in Brandfolder for a given
+          // field.
+          if ($include_values) {
+            foreach ($content->data as $custom_field_data) {
+              $custom_fields[$custom_field_data->attributes->name] = $custom_field_data->attributes->values;
+            }
+          }
+          // Array whose keys are custom field ids and whose values are custom
+          // field names.
+          else {
+            foreach ($content->data as $custom_field_data) {
+              $custom_fields[$custom_field_data->id] = $custom_field_data->attributes->name;
+            }
+          }
+        }
+        else {
+          $custom_fields = $content;
+        }
+      }
+
+      return $custom_fields;
+    }
+    else {
+      $this->message = $response->getReasonPhrase();
+
+      return FALSE;
+    }
+  }
+
+  /**
    * Gets Labels defined in a given Brandfolder, strctured as a nested
    * asssociative array.
    *
