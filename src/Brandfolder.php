@@ -80,6 +80,20 @@ class Brandfolder {
   public $default_collection_id;
 
   /**
+   * Flag for enabling verbose logging/recording.
+   *
+   * @var bool $verbose_logging_mode
+   */
+  protected $verbose_logging_mode = FALSE;
+
+  /**
+   * Internal storage for logging/recording data.
+   *
+   * @var array $log_data
+   */
+  protected $log_data;
+
+  /**
    * Brandfolder constructor.
    *
    * @param string $api_key
@@ -87,6 +101,7 @@ class Brandfolder {
    */
   public function __construct($api_key, $brandfolder_id = NULL, ClientInterface $client = NULL) {
     $this->api_key = $api_key;
+    $this->log_data = [];
 
     if (!is_null($brandfolder_id)) {
       $this->default_brandfolder_id = $brandfolder_id;
@@ -1112,7 +1127,55 @@ class Brandfolder {
       $options['json'] = $body;
     }
 
-    return $this->client->request($method, $this->endpoint . $path, $options);
+    $url = $this->endpoint . $path;
+    $response = $this->client->request($method, $url, $options);
+
+    if ($this->verbose_logging_mode) {
+      $status_code = $response->getStatusCode();
+      $options_string = json_encode($options);
+      $log_entry = "Brandfolder request. Method: $method. Requested URL: $url. Options: $options_string. Response code: $status_code.";
+      $log_entry = str_replace($this->api_key, '[[API-KEY-REDACTED]]', $log_entry);
+      $this->log_data[] = $log_entry;
+    }
+
+    return $response;
+  }
+
+  /**
+   * Activate verbose logging mode.
+   */
+  public function enableVerboseLogging() {
+    $this->verbose_logging_mode = TRUE;
+  }
+
+  /**
+   * Deactivate verbose logging mode.
+   */
+  public function disableVerboseLogging() {
+    $this->verbose_logging_mode = FALSE;
+  }
+
+  /**
+   * Determine whether verbose logging is enabled.
+   */
+  public function verboseLoggingIsEnabled() {
+    return $this->verbose_logging_mode;
+  }
+
+  /**
+   * Get log data.
+   */
+  public function getLogData() {
+    $this->log_data = array_filter($this->log_data);
+    
+    return $this->log_data;
+  }
+  
+  /**
+   * Clear log data.
+   */
+  public function clearLogData() {
+    $this->log_data = [];
   }
 
 }
