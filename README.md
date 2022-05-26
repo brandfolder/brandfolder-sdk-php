@@ -14,7 +14,7 @@ Brandfolder is a visually-elegant and user-friendly Digital Asset Management sof
 
 ## Description
 
-This project is no longer under active development. Users may feel free to fork and update should they so desire, but Brandfolder Engineering is unable to maintain support for this SDK.
+This project is no longer under active development. Users may feel free to fork and update should they so desire, but Brandfolder Engineering is unable to maintain support for the SDK at this time.
 
 ## References
 
