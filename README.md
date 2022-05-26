@@ -1,3 +1,5 @@
+⛔ NO LONGER UNDER ACIVE DEVELOPMENT ⛔
+
 # The Official PHP Brandfolder SDK
 
 [![GitHub](https://img.shields.io/github/license/brandfolder/brandfolder-sdk-php)](https://github.com/brandfolder/brandfolder-sdk-php/blob/master/LICENSE)
@@ -12,7 +14,7 @@ Brandfolder is a visually-elegant and user-friendly Digital Asset Management sof
 
 ## Description
 
-This project is under active development.
+This project is no longer under active development. Users may feel free to fork and update should they so desire, but Brandfolder Engineering is unable to maintain support for the SDK at this time.
 
 ## References
 
